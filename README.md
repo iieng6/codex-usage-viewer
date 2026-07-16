@@ -21,9 +21,7 @@ A lightweight, local-first Windows widget for viewing the remaining ChatGPT Code
 
 ## Screenshot
 
-> Screenshot placeholder — add the current v1.1.0 UI before publishing the GitHub release.
-
-<!-- ![Codex Usage Viewer](docs/screenshot.png) -->
+![Codex Usage Viewer](screenshot.png)
 
 ## Requirements
 
