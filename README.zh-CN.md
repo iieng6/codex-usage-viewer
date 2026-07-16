@@ -21,9 +21,7 @@
 
 ## 截图
 
-> 截图占位：发布 GitHub Release 前加入当前 v1.1.0 界面截图。
-
-<!-- ![Codex Usage Viewer](docs/screenshot.png) -->
+![Codex Usage Viewer](screenshot.png)
 
 ## 系统要求
 
