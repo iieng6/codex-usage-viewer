@@ -23,6 +23,14 @@ A lightweight, local-first Windows widget for viewing the remaining ChatGPT Code
 
 ![Codex Usage Viewer](screenshot.png)
 
+## Status Colors
+
+The indicator color reflects the remaining quota.
+
+- 🟢 Green: More than 50% remaining
+- 🟡 Yellow: 21%–50% remaining
+- 🔴 Red: 20% or less remaining
+
 ## Requirements
 
 - Windows 10 or Windows 11
