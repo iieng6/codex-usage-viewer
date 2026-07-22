@@ -77,7 +77,7 @@ namespace CodexUsageViewer.Usage
 
         private static async Task<string> WaitForResponseAsync(Process process, int expectedId, CancellationToken cancellationToken)
         {
-            DateTime deadline = DateTime.UtcNow.AddSeconds(20);
+            DateTime deadline = DateTime.UtcNow.AddSeconds(AppSettings.RequestTimeoutSeconds);
             Task<string> readTask = process.StandardOutput.ReadLineAsync();
 
             while (DateTime.UtcNow < deadline)
@@ -113,7 +113,7 @@ namespace CodexUsageViewer.Usage
                 readTask = process.StandardOutput.ReadLineAsync();
             }
 
-            throw new UsageException(UsageError.AppServerUnavailable, "Codex App Server 响应超时。");
+            throw new UsageException(UsageError.Timeout, "Codex App Server 响应超时。");
         }
 
         private static UsageSnapshot ParseResponse(string json)
@@ -125,12 +125,12 @@ namespace CodexUsageViewer.Usage
             }
             catch (Exception exception)
             {
-                throw new UsageException(UsageError.ProtocolChanged, "OpenAI 可能已更新 App Server 返回结构。", exception);
+                throw new UsageException(UsageError.FormatError, "返回数据无法解析。", exception);
             }
 
             if (envelope == null || envelope.Result == null || envelope.Result.RateLimits == null)
             {
-                throw new UsageException(UsageError.ProtocolChanged, "OpenAI 可能已更新 App Server 返回结构。");
+                throw new UsageException(UsageError.FormatError, "返回数据缺少额度字段。");
             }
 
             UsageWindow first = CreateWindow(envelope.Result.RateLimits.Primary);
@@ -140,6 +140,11 @@ namespace CodexUsageViewer.Usage
 
             ClassifyWindow(first, ref shortWindow, ref longWindow);
             ClassifyWindow(second, ref shortWindow, ref longWindow);
+
+            if (shortWindow == null && longWindow == null)
+            {
+                throw new UsageException(UsageError.InvalidData, "返回数据不包含有效额度窗口。");
+            }
 
             return new UsageSnapshot(shortWindow, longWindow);
         }
@@ -199,7 +204,11 @@ namespace CodexUsageViewer.Usage
             {
                 return new UsageException(UsageError.NotSignedIn, "未登录 ChatGPT。请先在 Codex 中登录。");
             }
-            return new UsageException(UsageError.ProtocolChanged, "OpenAI 可能已更新 App Server 接口。");
+            if (Contains(message, "timeout")) return new UsageException(UsageError.Timeout, "请求超时。");
+            if (Contains(message, "network") || Contains(message, "offline") || Contains(message, "connection")) return new UsageException(UsageError.NetworkUnavailable, "网络不可用。");
+            if (Contains(message, "500") || Contains(message, "502") || Contains(message, "503")) return new UsageException(UsageError.ServerError, "服务暂时异常。");
+            if (Contains(message, "http")) return new UsageException(UsageError.HttpError, "HTTP 状态异常。");
+            return new UsageException(UsageError.AppServerUnavailable, "暂时无法获取额度。");
         }
 
         private static bool Contains(string value, string text)

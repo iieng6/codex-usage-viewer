@@ -7,32 +7,26 @@ namespace CodexUsageViewer
     internal static class Program
     {
         [STAThread]
-        private static void Main()
+        private static void Main(string[] args)
         {
             try
             {
-                ProgramNetworkAudit.Write();
-            }
-            catch
-            {
-                MessageBox.Show(
-                    "无法生成 Program Network Audit。程序将停止运行。",
-                    ProgramInfo.Name,
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
+                string instanceSuffix = args != null && Array.IndexOf(args, "--isolated-test") >= 0 ? ".isolated." + System.Diagnostics.Process.GetCurrentProcess().Id : string.Empty;
+                using (SingleInstance singleInstance = new SingleInstance(instanceSuffix))
+                {
+                    if (!singleInstance.IsPrimary) { singleInstance.SignalExisting(); return; }
+                    AppLogger.Info("Application starting v" + ProgramInfo.Version);
+                    try { ProgramNetworkAudit.Write(); } catch (Exception exception) { AppLogger.Error("Program network audit write failed", exception); }
 
-            Application application = new Application
-            {
-                ShutdownMode = ShutdownMode.OnExplicitShutdown
-            };
-            UsageService usageService = new UsageService(new DesktopUsageProvider());
-            MainWindow window = new MainWindow(usageService);
-            using (TrayController trayController = new TrayController(window))
-            {
-                application.Run(window);
+                    Application application = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+                    application.DispatcherUnhandledException += delegate(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e) { AppLogger.Error("Unhandled UI exception", e.Exception); e.Handled = true; };
+                    AppDomain.CurrentDomain.UnhandledException += delegate(object sender, UnhandledExceptionEventArgs e) { AppLogger.Error("Unhandled application exception", e.ExceptionObject as Exception); };
+                    MainWindow window = new MainWindow(new UsageService(new DesktopUsageProvider()));
+                    singleInstance.Listen(application.Dispatcher, window.ShowFromTray);
+                    using (TrayController trayController = new TrayController(window)) { application.Run(window); }
+                }
             }
+            catch (Exception exception) { AppLogger.Error("Fatal startup failure", exception); }
         }
     }
 }

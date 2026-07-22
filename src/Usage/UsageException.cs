@@ -4,9 +4,13 @@ namespace CodexUsageViewer.Usage
 {
     internal enum UsageError
     {
+        NetworkUnavailable,
+        Timeout,
         NotSignedIn,
         AppServerUnavailable,
-        ProtocolChanged,
+        ServerError,
+        HttpError,
+        FormatError,
         InvalidData
     }
 
@@ -25,5 +29,23 @@ namespace CodexUsageViewer.Usage
         }
 
         public UsageError Error { get; private set; }
+
+        public string UserMessage
+        {
+            get { return MessageFor(Error); }
+        }
+
+        internal static string MessageFor(UsageError error)
+        {
+            switch (error)
+            {
+                case UsageError.NetworkUnavailable: return Localization.Get("NetworkFailed");
+                case UsageError.Timeout: return Localization.Get("RequestTimeout");
+                case UsageError.NotSignedIn: return Localization.Get("NotSignedIn");
+                case UsageError.FormatError:
+                case UsageError.InvalidData: return Localization.Get("InvalidData");
+                default: return Localization.Get("CannotReadUsage");
+            }
+        }
     }
 }

@@ -2,7 +2,7 @@
 
 ## Release Status
 
-Version `v1.1.0` passes the project release audit as a local, read-only Codex Usage viewer.
+Version `v2.0.0` is audited here as a local, read-only Codex Usage viewer.
 
 This document distinguishes between two independent components:
 
@@ -54,14 +54,16 @@ It starts the official `codex app-server` and sends only fixed initialization me
 
 ## Persistence
 
-No user data or runtime usage data is persisted. In particular, the program never saves raw JSON, usage values, cookies, tokens, login state, chats, prompts, account data, or history.
+Only display-ready allowance values are persisted so a failed refresh can keep showing the last successful data. Raw responses and authentication material are never persisted.
 
 The only persisted files are program configuration and documentation:
 
 - `%LOCALAPPDATA%\CodexUsageViewer\window-state.txt`
+- `%LOCALAPPDATA%\CodexUsageViewer\usage-cache.json`
+- `%LOCALAPPDATA%\CodexUsageViewer\CodexUsageViewer.log` (rotated at 512 KiB, one backup)
 - `%LOCALAPPDATA%\CodexUsageViewer\Program Network Audit.txt`
 
-The Program Network Audit is static and contains no runtime values, timestamps, identifiers, or user information.
+The JSON cache contains only two percentages, their reset times, a schema version, and the last successful update time. Logs contain categories and sanitized exception summaries, never tokens, cookies, authorization headers, raw responses, or account details.
 
 ## Permissions
 
@@ -69,7 +71,7 @@ This program does not request administrator privileges, modify the registry, cre
 
 ## Telemetry and Analytics
 
-This program has no telemetry, analytics, logging, crash reporting, or event-reporting implementation. It explicitly starts the official App Server with `analytics.enabled=false`.
+This program has no telemetry, analytics, remote logging, crash upload, or event-reporting implementation. Local rotating diagnostics are kept for troubleshooting. It explicitly starts the official App Server with `analytics.enabled=false`.
 
 ## Reporting a Security Issue
 

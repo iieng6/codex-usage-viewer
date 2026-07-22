@@ -9,69 +9,50 @@ namespace CodexUsageViewer
     {
         private readonly MainWindow window;
         private readonly Forms.NotifyIcon notifyIcon;
+        private Forms.ContextMenuStrip menu;
         private bool disposed;
 
         public TrayController(MainWindow window)
         {
             this.window = window;
-            Forms.ContextMenuStrip menu = new Forms.ContextMenuStrip();
-            menu.Items.Add("Show", null, OnShow);
-            menu.Items.Add("Refresh", null, OnRefresh);
-            menu.Items.Add("About", null, OnAbout);
-            menu.Items.Add(new Forms.ToolStripSeparator());
-            menu.Items.Add("Exit", null, OnExit);
-
-            notifyIcon = new Forms.NotifyIcon
-            {
-                Text = ProgramInfo.Name,
-                Icon = SystemIcons.Application,
-                ContextMenuStrip = menu,
-                Visible = true
-            };
-            notifyIcon.DoubleClick += OnDoubleClick;
+            notifyIcon = new Forms.NotifyIcon { Text = ProgramInfo.Name, Icon = SystemIcons.Application, Visible = true };
+            notifyIcon.DoubleClick += delegate { window.Dispatcher.BeginInvoke(new Action(window.ShowFromTray)); };
+            window.DisplayChanged += OnDisplayChanged; Localization.Changed += OnLanguageChanged;
+            RebuildMenu(); UpdateText();
         }
 
-        public void Dispose()
+        private void RebuildMenu()
         {
-            if (disposed)
-            {
-                return;
-            }
-            disposed = true;
-            notifyIcon.Visible = false;
-            notifyIcon.Dispose();
+            Forms.ContextMenuStrip replacement = new Forms.ContextMenuStrip();
+            Forms.ToolStripMenuItem collapse = (Forms.ToolStripMenuItem)replacement.Items.Add(window.IsCollapsed ? Localization.Get("Expand") : Localization.Get("Collapse"), null, delegate { window.Dispatcher.BeginInvoke(new Action(window.ToggleCollapsed)); });
+            replacement.Items.Add(Localization.Get("Show"), null, delegate { window.Dispatcher.BeginInvoke(new Action(window.ShowFromTray)); });
+            replacement.Items.Add(Localization.Get("HideToTray"), null, delegate { window.Dispatcher.BeginInvoke(new Action(window.HideTemporarily)); });
+            Forms.ToolStripMenuItem topmost = (Forms.ToolStripMenuItem)replacement.Items.Add(Localization.Get("AlwaysOnTop"), null, delegate { window.Dispatcher.BeginInvoke(new Action(window.ToggleTopmost)); });
+            Forms.ToolStripMenuItem fullScreen = (Forms.ToolStripMenuItem)replacement.Items.Add(Localization.Get("AutoHideFullscreen"), null, delegate { window.Dispatcher.BeginInvoke(new Action(window.ToggleAutoHideFullScreen)); });
+            replacement.Items.Add(Localization.Get("RefreshNow"), null, delegate { window.Dispatcher.BeginInvoke(new Action(async delegate { await window.RefreshFromTray(); })); });
+            Forms.ToolStripMenuItem language = new Forms.ToolStripMenuItem(Localization.Get("Language"));
+            AddLanguageItem(language, Localization.Get("FollowSystem"), Localization.SystemLanguage);
+            AddLanguageItem(language, Localization.Get("SimplifiedChinese"), Localization.ChineseLanguage);
+            AddLanguageItem(language, Localization.Get("English"), Localization.EnglishLanguage);
+            replacement.Items.Add(language);
+            replacement.Items.Add(new Forms.ToolStripSeparator());
+            replacement.Items.Add(Localization.Get("Exit"), null, delegate { window.Dispatcher.BeginInvoke(new Action(ExitApplication)); });
+            replacement.Opening += delegate { collapse.Text = window.IsCollapsed ? Localization.Get("Expand") : Localization.Get("Collapse"); topmost.Checked = window.IsAlwaysOnTop; fullScreen.Checked = window.IsAutoHideFullScreen; };
+            Forms.ContextMenuStrip old = menu; menu = replacement; notifyIcon.ContextMenuStrip = menu; if (old != null) old.Dispose();
+            AppLogger.Info("Tray menu rebuilt; language=" + Localization.EffectiveLanguage + "; preference=" + Localization.Preference);
         }
 
-        private void OnShow(object sender, EventArgs e)
+        private void AddLanguageItem(Forms.ToolStripMenuItem parent, string text, string value)
         {
-            window.Dispatcher.BeginInvoke(new Action(window.ShowFromTray));
+            Forms.ToolStripMenuItem item = new Forms.ToolStripMenuItem(text) { Checked = Localization.Preference == value };
+            item.Click += delegate { window.Dispatcher.BeginInvoke(new Action(delegate { window.SetLanguage(value); })); };
+            parent.DropDownItems.Add(item);
         }
 
-        private void OnRefresh(object sender, EventArgs e)
-        {
-            window.Dispatcher.BeginInvoke(new Action(window.RefreshFromTray));
-        }
-
-        private void OnAbout(object sender, EventArgs e)
-        {
-            window.Dispatcher.BeginInvoke(new Action(window.ShowAbout));
-        }
-
-        private void OnExit(object sender, EventArgs e)
-        {
-            window.Dispatcher.BeginInvoke(new Action(ExitApplication));
-        }
-
-        private void OnDoubleClick(object sender, EventArgs e)
-        {
-            window.Dispatcher.BeginInvoke(new Action(window.ShowFromTray));
-        }
-
-        private void ExitApplication()
-        {
-            Dispose();
-            window.RequestExit();
-            Application.Current.Shutdown();
-        }
+        public void Dispose() { if (disposed) return; disposed = true; window.DisplayChanged -= OnDisplayChanged; Localization.Changed -= OnLanguageChanged; notifyIcon.Visible = false; notifyIcon.Dispose(); if (menu != null) menu.Dispose(); }
+        private void OnDisplayChanged(object sender, EventArgs e) { UpdateText(); }
+        private void OnLanguageChanged(object sender, EventArgs e) { RebuildMenu(); UpdateText(); }
+        private void UpdateText() { string text = window.TrayText; notifyIcon.Text = text.Length > 63 ? text.Substring(0, 63) : text; }
+        private void ExitApplication() { Dispose(); window.RequestExit(); Application.Current.Shutdown(); }
     }
 }

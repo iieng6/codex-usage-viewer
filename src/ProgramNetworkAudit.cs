@@ -20,10 +20,10 @@ namespace CodexUsageViewer
             "Cookie Access: No - Contains no browser, cookie store, or cookie API access.\r\n" +
             "Token Access: No - Contains no API key, access token, refresh token, credential store, or authentication-file access. Authentication remains inside the official codex app-server.\r\n" +
             "Clipboard Access: No - Contains no clipboard API access.\r\n" +
-            "File Access: Yes - Reads and writes only its window geometry configuration and writes this static audit document. It does not read user documents or runtime Usage data from files.\r\n" +
-            "Telemetry: No - Contains no telemetry, logging, crash-reporting, or event-reporting implementation.\r\n" +
+            "File Access: Yes - Reads and writes window position, a minimal JSON usage cache, rotating local logs, and this static audit document under LocalAppData\\CodexUsageViewer.\r\n" +
+            "Telemetry: No - Local diagnostic logging only; no telemetry, remote logging, crash upload, or analytics.\r\n" +
             "Analytics: No - Contains no analytics implementation and explicitly starts codex app-server with analytics.enabled=false.\r\n" +
-            "Data Persistence: Yes - Persists only window position/size configuration and this static program-capability audit. Usage, raw JSON, cookies, tokens, login state, chats, prompts, user identity, and runtime history are never persisted.\r\n";
+            "Data Persistence: Yes - Persists only display-ready percentages/reset times/last-success time, window position, rotating diagnostics, and this audit. Raw JSON, cookies, tokens, login state, chats, prompts, and user identity are never persisted.\r\n";
 
         public static string Write()
         {
